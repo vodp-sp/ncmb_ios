@@ -44,40 +44,43 @@ NSString *const NCMBScriptServicePath = @"script";
     return nil;
 }
 
-- (NSURL *)createUrlFromScriptName:(NSString *)scriptName query:(NSDictionary *)queryDic {
+- (NSURL *)createUrlFromScriptName:(NSString *)scriptName query:(NSDictionary *)queryDic withMethod:(NCMBScriptRequestMethod)method {
     NSString *url = [NSString stringWithFormat:@"%@/%@/%@/%@",
                      _endpoint,
                      NCMBScriptServiceApiVersion,
                      NCMBScriptServicePath,
                      scriptName];
-    if(queryDic != nil && [queryDic count] > 0) {
-        url = [url stringByAppendingString:@"?"];
-        for (NSString *key in [[queryDic allKeys] sortedArrayUsingSelector:@selector(compare:)]) {
-            NSString *encodedStr = nil;
-            if ([[queryDic objectForKey:key] isKindOfClass:[NSDictionary class]] ||
-                [[queryDic objectForKey:key] isKindOfClass:[NSArray class]])
-            {
-                NSError *error = nil;
-                NSData *json = [NSJSONSerialization dataWithJSONObject:[queryDic objectForKey:key]
-                                                               options:kNilOptions
-                                                                 error:&error];
-                if (!error) {
-                    NSString *jsonStr = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
-                    encodedStr = [NCMBRequest returnEncodedString:jsonStr];
+    if (method != NCMBExecuteWithDeleteMethod) {
+        if(queryDic != nil && [queryDic count] > 0) {
+            url = [url stringByAppendingString:@"?"];
+            for (NSString *key in [[queryDic allKeys] sortedArrayUsingSelector:@selector(compare:)]) {
+                NSString *encodedStr = nil;
+                if ([[queryDic objectForKey:key] isKindOfClass:[NSDictionary class]] ||
+                    [[queryDic objectForKey:key] isKindOfClass:[NSArray class]])
+                {
+                    NSError *error = nil;
+                    NSData *json = [NSJSONSerialization dataWithJSONObject:[queryDic objectForKey:key]
+                                                                   options:kNilOptions
+                                                                     error:&error];
+                    if (!error) {
+                        NSString *jsonStr = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+                        encodedStr = [NCMBRequest returnEncodedString:jsonStr];
+                    }
+                } else {
+                    encodedStr = [NCMBRequest returnEncodedString:[NSString stringWithFormat:@"%@",[queryDic objectForKey:key]]];
                 }
-            } else {
-                encodedStr = [NCMBRequest returnEncodedString:[NSString stringWithFormat:@"%@",[queryDic objectForKey:key]]];
+                if (encodedStr) {
+                    url = [url stringByAppendingString:[NSString stringWithFormat:@"%@=%@&", key, encodedStr]];
+                }
+                
             }
-            if (encodedStr) {
-                url = [url stringByAppendingString:[NSString stringWithFormat:@"%@=%@&", key, encodedStr]];
-            }
-            
+            url = [url stringByReplacingOccurrencesOfString:@"&$"
+                                                 withString:@""
+                                                    options:NSRegularExpressionSearch
+                                                      range:NSMakeRange(0, url.length)];
         }
-        url = [url stringByReplacingOccurrencesOfString:@"&$"
-                                             withString:@""
-                                                options:NSRegularExpressionSearch
-                                                  range:NSMakeRange(0, url.length)];
     }
+    
     return [NSURL URLWithString:url];
 }
 
@@ -117,7 +120,7 @@ NSString *const NCMBScriptServicePath = @"script";
                      body:(NSDictionary *)body
                     query:(NSDictionary *)query
                     error:(NSError **)error {
-    _request = [self createRequest:[self createUrlFromScriptName:name query:query]
+    _request = [self createRequest:[self createUrlFromScriptName:name query:query withMethod:method]
                             method:method
                             header:header
                               body:body];
@@ -176,10 +179,19 @@ NSString *const NCMBScriptServicePath = @"script";
                 query:(NSDictionary *)query
             withBlock:(NCMBScriptExecuteCallback)callback
 {
-    _request = [self createRequest:[self createUrlFromScriptName:name query:query]
-                            method:method
-                            header:header
-                              body:body];
+    // if delete method
+    if (method == NCMBExecuteWithDeleteMethod) {
+        // switch query to body
+        _request = [self createRequest:[self createUrlFromScriptName:name query:query withMethod:method]
+                                method:method
+                                header:header
+                                  body:query];
+    } else {
+        _request = [self createRequest:[self createUrlFromScriptName:name query:query withMethod:method]
+                                method:method
+                                header:header
+                                  body:body];
+    }
     void (^completionHandler)(NSData *data, NSURLResponse *response, NSError *error) = ^void (NSData *data, NSURLResponse *response, NSError *error) {
         NSHTTPURLResponse *httpRes = (NSHTTPURLResponse*)response;
         if (httpRes.statusCode != 200 && httpRes.statusCode != 201) {
