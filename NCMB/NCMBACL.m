@@ -54,6 +54,7 @@ static NCMBACL *defaultACL;
  @param user 権限を設定するユーザ
  */
 + (NCMBACL *)ACLWithUser:(NCMBUser *)user{
+    
     NCMBACL *acl = [[NCMBACL alloc] init];
     [acl setReadAccess:YES forUser:user];
     [acl setWriteAccess:YES forUser:user];
