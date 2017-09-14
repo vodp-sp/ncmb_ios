@@ -41,6 +41,7 @@ static NCMBACL *defaultACL;
  NCMBACLのインスタンスを生成。デフォルトでは全ての権限が許可されている。
  */
 + (NCMBACL *)ACL{
+    
     if ([defaultACL isKindOfClass:[NCMBACL class]]){
         return defaultACL;
     }
