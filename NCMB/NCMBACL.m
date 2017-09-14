@@ -41,6 +41,7 @@ static NCMBACL *defaultACL;
  NCMBACLのインスタンスを生成。デフォルトでは全ての権限が許可されている。
  */
 + (NCMBACL *)ACL{
+    
     if ([defaultACL isKindOfClass:[NCMBACL class]]){
         return defaultACL;
     }
@@ -53,6 +54,7 @@ static NCMBACL *defaultACL;
  @param user 権限を設定するユーザ
  */
 + (NCMBACL *)ACLWithUser:(NCMBUser *)user{
+    
     NCMBACL *acl = [[NCMBACL alloc] init];
     [acl setReadAccess:YES forUser:user];
     [acl setWriteAccess:YES forUser:user];
